@@ -1,33 +1,10 @@
 from lxml import html
-from cssselect import GenericTranslator, SelectorError
 import requests
 import sys
 
 base_url = 'https://sofifa.com'
 
-if len(sys.argv) > 1:
-    # Search page
-    search_url = base_url + '/teams?keyword=' + sys.argv[1]
-    page = requests.get(search_url)
-    tree = html.fromstring(page.content)
-
-    expression = '//div[contains(@class, \'col-name\') and contains(@class, \'text-ellipsis\') and contains(@class, \'rtl\')]/a/text()'
-    elements = tree.xpath(expression)
-    selectedIndex = 0
-
-    if len(elements) > 2:
-        for i in range(int(len(elements) / 2)):
-            print(f'[{i}]: ', elements[i * 2], '←', elements[i * 2 + 1])
-
-        selectedIndex = int(input(f'Specify a club [0-{int(len(elements) / 2) - 1}]: ')) * 2
-        print()
-    
-    selected = (elements[selectedIndex], elements[selectedIndex+ 1])
-    print(f'Selected \'{selected[0]} ← {selected[1]}\'.')
-
-    expression = '//div[contains(@class, \'col-name\') and contains(@class, \'text-ellipsis\') and contains(@class, \'rtl\')]/a/@href'
-    team_url = base_url + tree.xpath(expression)[selectedIndex]
-
+def stats(team_url):
     print('URL: ', team_url)
 
     # Team page
@@ -49,7 +26,7 @@ if len(sys.argv) > 1:
     for i in range(len(lineup)):
         players[lineup[i]] = base_url + player_urls[i]
 
-    print('Players:')
+    ret = {}
 
     for player_name, player_url in players.items():
         player_stats = []
@@ -70,7 +47,38 @@ if len(sys.argv) > 1:
 
             player_stats.append(sum([int(x) for x in stats]) / len(stats))
 
-        print('\t', player_name, '→', player_stats)
+            ret[player_name] = player_stats
+        
+    return ret
+
+# Search page
+if len(sys.argv) > 1:
+    search_url = base_url + '/teams?keyword=' + sys.argv[1]
 
 else:
-    print('You need to specify a team.')
+    search_url = base_url + '/teams?keyword=' + input("Team: ")
+
+page = requests.get(search_url)
+tree = html.fromstring(page.content)
+
+expression = '//div[contains(@class, \'col-name\') and contains(@class, \'text-ellipsis\') and contains(@class, \'rtl\')]/a/text()'
+elements = tree.xpath(expression)
+selectedIndex = 0
+
+if len(elements) > 2:
+    for i in range(int(len(elements) / 2)):
+        print(f'[{i}]: ', elements[i * 2], '←', elements[i * 2 + 1])
+
+    selectedIndex = int(input(f'Specify a club [0-{int(len(elements) / 2) - 1}]: ')) * 2
+    print()
+
+selected = (elements[selectedIndex], elements[selectedIndex+ 1])
+print(f'Selected \'{selected[0]} ← {selected[1]}\'.')
+
+expression = '//div[contains(@class, \'col-name\') and contains(@class, \'text-ellipsis\') and contains(@class, \'rtl\')]/a/@href'
+team_url = base_url + tree.xpath(expression)[selectedIndex]
+
+# Team's stats
+team_stats = stats(team_url)
+
+[print('\t', key, '→', val) for key, val in team_stats.items()]
