@@ -1,0 +1,9 @@
+{
+    "dataFile": "data/season-1819.csv",
+    "saveFile": "data/season-1819.min.csv",
+    "dataColumns": ["HomeTeam", "AwayTeam", "FTR"],
+    "saveDataColumns": ["Home", "Away", "Result"],
+    "xDataFile": "data/X.csv",
+    "yDataFile": "data/y.csv",
+    "matchNumber": 10
+}

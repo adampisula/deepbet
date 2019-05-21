@@ -1,11 +1,56 @@
+import json
 import csv
-import pickle
 import requests
 import sys
-import pickle
 from lxml import html
 
-datafile = 'data/season-1819.min.csv'
+with open('config.json', 'r') as f:
+    config = json.load(f)
+
+filename = config['dataFile']
+savefile = config['saveFile']
+data = config['dataColumns']
+newDataNames = config['saveDataColumns']
+maxamount = config['matchNumber']
+
+dataIndices = []
+matches = [newDataNames]
+
+# Loading data
+with open(filename, 'r') as f:
+    print('Reading...')
+
+    reader = csv.reader(f)
+    index = 0
+
+    for row in reader:
+        if index == 0:
+            dataIndices = [row.index(d) for d in data]
+
+        else:
+            match = []
+            match = [row[dataIndex] for dataIndex in dataIndices]
+
+            matches.append(match)
+
+        index += 1
+
+        if maxamount > -1 and index > maxamount:
+            break
+
+# Writing minimised data
+with open(savefile, 'w') as f:
+    print('Writing...')
+
+    writer = csv.writer(f)
+
+    for match in matches:
+        writer.writerow(match)
+
+print(f'Processed {len(matches) - 1} matches.\n')
+
+# Get players' stats
+datafile = config['saveFile']
 
 def stats(team_name):
     base_url = 'https://sofifa.com'
@@ -118,7 +163,7 @@ def loadData(filename):
 
                 else:
                     for k, v in team_stats.items():
-                        x.extend([el / 100 for el in v])
+                        x.extend([round(el / 100, 2) for el in v])
 
                 teams[row[0]] = team_stats
             
@@ -132,17 +177,20 @@ def loadData(filename):
 
                 else:
                     for k, v in team_stats.items():
-                        x.extend([el / 100 for el in v])
+                        x.extend([round(el / 100, 2) for el in v])
 
                 teams[row[1]] = team_stats
+
+            if teams[row[0]] == None or teams[row[1]] == None:
+                continue
 
             X.append(x)
             
             wdl = None # Win, Draw, Lose
 
-            if row[1] == 'H':
+            if row[2] == 'H':
                 wdl = [1, 0, 0]
-            elif row[1] == 'D':
+            elif row[2] == 'D':
                 wdl = [0, 1, 0]
             else:
                 wdl = [0, 0, 1]
@@ -154,19 +202,20 @@ def loadData(filename):
 X, y = loadData(datafile)
 print()
 
-for i in range(5):
-    print(X[i])
-    print(y[i])
-    print()
-
-with open('data/X.csv', 'w') as f:
+with open(config['xDataFile'], 'w') as f:
     writer = csv.writer(f)
+    
+    writer.writerow([i + 1 for i in range(len(X[0]))])
 
     for x in X:
         writer.writerow(x)
 
-with open('data/y.csv', 'w') as f:
+with open(config['yDataFile'], 'w') as f:
     writer = csv.writer(f)
+
+    writer.writerow(['Home', 'Draw', 'Away'])
 
     for el in y:
         writer.writerow(el)
+
+print('Data saved to', config['xDataFile'], 'and', config['yDataFile'])
